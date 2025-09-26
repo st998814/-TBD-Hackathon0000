@@ -2,20 +2,38 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 import fs from 'fs' // <-- add this
+import path from 'path'
+
+function getHttpsConfig() {
+  const keyPath  = process.env.VITE_HTTPS_KEY  || './139.84.201.140-key.pem'
+  const certPath = process.env.VITE_HTTPS_CERT || './139.84.201.140.pem'
+  try {
+    if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+      return {
+        key: fs.readFileSync(keyPath),
+        cert: fs.readFileSync(certPath),
+      }
+    }
+  } catch (_) {}
+  return false
+}
+
+const httpsCfg = getHttpsConfig()
+const isHttps = !!httpsCfg
 
 export default defineConfig({
   server: {
     host: true,                 // allow LAN access (phone)
-    https: {
-      key: fs.readFileSync('./139.84.201.140-key.pem'),
-      cert: fs.readFileSync('./139.84.201.140.pem'),
-    },
+    port: Number(process.env.VITE_PORT || 5173),
+    https: isHttps ? httpsCfg : undefined,
     // (optional) helps HMR over HTTPS from another device
-    hmr: {
-      protocol: 'wss',
-      host: '139.84.201.140',
-      port: 5173
-    }
+    hmr: isHttps
+      ? {
+          protocol: 'wss',
+          host: process.env.VITE_HMR_HOST || '139.84.201.140',
+          port: Number(process.env.VITE_HMR_PORT || 5173)
+        }
+      : undefined
   },
 
   plugins: [
