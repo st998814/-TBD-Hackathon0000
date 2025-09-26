@@ -41,7 +41,7 @@
         v-if="!isTracking" 
         @click="startTrip" 
         class="btn btn-primary"
-        :disabled="!geolocationSupported || selectedPlaceTypes.length === 0"
+        :disabled="selectedPlaceTypes.length === 0"
       >
         Start Trip
       </button>
@@ -59,6 +59,14 @@
         :disabled="isTracking"
       >
         Clear Data
+      </button>
+      
+      <button 
+        v-if="!isTracking && !geolocationSupported" 
+        @click="startTestMode" 
+        class="btn btn-test"
+      >
+        Demo Mode
       </button>
     </div>
 
@@ -149,7 +157,7 @@
       :is-visible="showToast"
       :title="toastTitle"
       :description="toastDescription"
-      type="success"
+      :type="toastType"
       @close="showToast = false"
     />
 
@@ -201,10 +209,15 @@ const nearbyPlaces = ref([])
 const allDiscoveredPlaces = ref([])
 const discoveredPlaceIds = ref(new Set())
 
+// Test mode for development/demo
+const isTestMode = ref(false)
+const testLocation = ref({ lat: 39.9042, lng: 116.4074 }) // Beijing coordinates
+
 // Toast notification state
 const showToast = ref(false)
 const toastTitle = ref('')
 const toastDescription = ref('')
+const toastType = ref('success')
 
 // Map state
 const map = ref(null)
@@ -378,14 +391,148 @@ const showDiscoveryToast = (newPlaces) => {
   showToast.value = true
 }
 
+const showGeolocationError = (message) => {
+  toastTitle.value = 'Location Access Required'
+  toastDescription.value = message
+  toastType.value = 'error'
+  showToast.value = true
+}
+
+const handleGeolocationError = (error) => {
+  let errorMessage = 'Unknown location error'
+  
+  switch (error.code) {
+    case error.PERMISSION_DENIED:
+      errorMessage = 'Location access denied. Please enable location permissions in your browser settings and refresh the page.'
+      break
+    case error.POSITION_UNAVAILABLE:
+      errorMessage = 'Location information is unavailable. Please check your device settings.'
+      break
+    case error.TIMEOUT:
+      errorMessage = 'Location request timed out. Please try again.'
+      break
+    default:
+      errorMessage = error.message || 'Failed to get location'
+  }
+  
+  // Stop tracking on error
+  if (watchId.value) {
+    navigator.geolocation.clearWatch(watchId.value)
+    watchId.value = null
+  }
+  
+  isTracking.value = false
+  
+  toastTitle.value = 'Location Error'
+  toastDescription.value = errorMessage
+  toastType.value = 'error'
+  showToast.value = true
+}
+
+const startTestMode = async () => {
+  if (selectedPlaceTypes.value.length === 0) {
+    showGeolocationError('Please select at least one place type to discover')
+    return
+  }
+
+  isTestMode.value = true
+  
+  // Reset session data
+  sessionDiscovered.value = []
+  routePoints.value = []
+  nearbyPlaces.value = []
+  tripStartTime.value = Date.now()
+  isTracking.value = true
+
+  // Initialize map
+  await initializeMap()
+
+  // Use test location
+  currentLocation.value = {
+    lat: testLocation.value.lat,
+    lng: testLocation.value.lng,
+    timestamp: Date.now()
+  }
+
+  // Add to route points
+  routePoints.value.push({
+    lat: testLocation.value.lat,
+    lng: testLocation.value.lng,
+    timestamp: Date.now()
+  })
+
+  // Update map
+  updateUserLocation(testLocation.value.lat, testLocation.value.lng)
+
+  // Check for nearby places
+  await checkForNearbyPlaces(testLocation.value.lat, testLocation.value.lng, Date.now())
+
+  // Show demo mode notification
+  toastTitle.value = 'Demo Mode Active'
+  toastDescription.value = 'Using simulated location in Beijing. Real location access requires HTTPS.'
+  toastType.value = 'info'
+  showToast.value = true
+
+  // Simulate movement for demo
+  simulateMovement()
+}
+
+const simulateMovement = () => {
+  if (!isTracking.value || !isTestMode.value) return
+
+  // Simulate walking around Beijing
+  const movements = [
+    { lat: 39.9042, lng: 116.4074 }, // Tiananmen Square
+    { lat: 39.9062, lng: 116.4074 }, // North
+    { lat: 39.9062, lng: 116.4094 }, // Northeast
+    { lat: 39.9042, lng: 116.4094 }, // East
+    { lat: 39.9022, lng: 116.4094 }, // Southeast
+    { lat: 39.9022, lng: 116.4074 }, // South
+    { lat: 39.9042, lng: 116.4074 }  // Back to start
+  ]
+
+  let currentIndex = 0
+  const moveInterval = setInterval(() => {
+    if (!isTracking.value || !isTestMode.value) {
+      clearInterval(moveInterval)
+      return
+    }
+
+    const nextLocation = movements[currentIndex % movements.length]
+    currentIndex++
+
+    currentLocation.value = {
+      lat: nextLocation.lat,
+      lng: nextLocation.lng,
+      timestamp: Date.now()
+    }
+
+    routePoints.value.push({
+      lat: nextLocation.lat,
+      lng: nextLocation.lng,
+      timestamp: Date.now()
+    })
+
+    updateUserLocation(nextLocation.lat, nextLocation.lng)
+    checkForNearbyPlaces(nextLocation.lat, nextLocation.lng, Date.now())
+  }, 5000) // Move every 5 seconds
+}
+
 const startTrip = async () => {
   if (!geolocationSupported.value) {
-    alert('Geolocation is not supported by this browser')
+    showGeolocationError('Geolocation is not supported by this browser. Please use a modern browser.')
     return
   }
 
   if (selectedPlaceTypes.value.length === 0) {
-    alert('Please select at least one place type to discover')
+    showGeolocationError('Please select at least one place type to discover')
+    return
+  }
+
+  // Check if we're on HTTPS or localhost
+  const isSecure = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+  if (!isSecure) {
+    showGeolocationError('This app requires HTTPS to access your location. Please use HTTPS or try on localhost.')
     return
   }
 
@@ -426,11 +573,11 @@ const startTrip = async () => {
     },
     (error) => {
       console.error('Geolocation error:', error)
-      alert('Error getting location: ' + error.message)
+      handleGeolocationError(error)
     },
     {
       enableHighAccuracy: true,
-      timeout: 10000,
+      timeout: 15000,
       maximumAge: 1000
     }
   )
@@ -444,6 +591,9 @@ const endTrip = () => {
     navigator.geolocation.clearWatch(watchId.value)
     watchId.value = null
   }
+
+  // Reset test mode
+  isTestMode.value = false
 
   tripEndTime.value = Date.now()
   isTracking.value = false
@@ -691,6 +841,15 @@ onUnmounted(() => {
 
 .btn-secondary:hover:not(:disabled) {
   background: #4b5563;
+}
+
+.btn-test {
+  background: #f59e0b;
+  color: white;
+}
+
+.btn-test:hover:not(:disabled) {
+  background: #d97706;
 }
 
 .current-stats {
