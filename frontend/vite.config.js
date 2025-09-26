@@ -1,13 +1,27 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
+import fs from 'fs' // <-- add this
 
-// https://vite.dev/config/
 export default defineConfig({
+  server: {
+    host: true,                 // allow LAN access (phone)
+    https: {
+      key: fs.readFileSync('./139.84.201.140-key.pem'),
+      cert: fs.readFileSync('./139.84.201.140.pem'),
+    },
+    // (optional) helps HMR over HTTPS from another device
+    hmr: {
+      protocol: 'wss',
+      host: '139.84.201.140',
+      port: 5173
+    }
+  },
+
   plugins: [
     vue(),
     VitePWA({
-      registerType: 'autoUpdate', // keep the service worker up-to-date
+      registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'robots.txt', 'icons/ios-180.png'],
       manifest: {
         name: 'Hackathon PWA',
@@ -27,7 +41,7 @@ export default defineConfig({
         ]
       },
       workbox: {
-        navigateFallback: '/index.html', // SPA routing when offline
+        navigateFallback: '/index.html',
         runtimeCaching: [
           {
             urlPattern: ({ request }) => ['style', 'script', 'worker'].includes(request.destination),
@@ -53,8 +67,7 @@ export default defineConfig({
           }
         ]
       }
-      // Enable this to test SW in dev:
-      // ,devOptions: { enabled: true }
+      // ,devOptions: { enabled: true } // only if you want SW in dev
     })
   ]
 })
