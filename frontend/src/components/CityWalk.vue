@@ -201,6 +201,8 @@ const tripStartTime = ref(0)
 const tripEndTime = ref(0)
 const showTripReport = ref(false)
 const watchId = ref(null)
+const now = ref(Date.now())
+const durationTimer = ref(null)
 
 // Place discovery state
 const selectedPlaceTypes = ref(['restaurant', 'cafe'])
@@ -228,7 +230,7 @@ const placeMarkers = ref([])
 // Computed properties
 const currentDuration = computed(() => {
   if (!isTracking.value || tripStartTime.value === 0) return 0
-  return Date.now() - tripStartTime.value
+  return now.value - tripStartTime.value
 })
 
 const currentDistance = computed(() => {
@@ -256,6 +258,20 @@ const recentDiscoveries = computed(() => {
 })
 
 // Methods
+const startDurationTimer = () => {
+  stopDurationTimer()
+  durationTimer.value = setInterval(() => {
+    now.value = Date.now()
+  }, 1000)
+}
+
+const stopDurationTimer = () => {
+  if (durationTimer.value) {
+    clearInterval(durationTimer.value)
+    durationTimer.value = null
+  }
+}
+
 const togglePlaceType = (type) => {
   const index = selectedPlaceTypes.value.indexOf(type)
   if (index > -1) {
@@ -396,6 +412,8 @@ const showGeolocationError = (message) => {
   toastDescription.value = message
   toastType.value = 'error'
   showToast.value = true
+
+  stopDurationTimer()
 }
 
 const handleGeolocationError = (error) => {
@@ -427,6 +445,8 @@ const handleGeolocationError = (error) => {
   toastDescription.value = errorMessage
   toastType.value = 'error'
   showToast.value = true
+
+  stopDurationTimer()
 }
 
 const startTestMode = async () => {
@@ -442,7 +462,9 @@ const startTestMode = async () => {
   routePoints.value = []
   nearbyPlaces.value = []
   tripStartTime.value = Date.now()
+  now.value = tripStartTime.value
   isTracking.value = true
+  startDurationTimer()
 
   // Initialize map
   await initializeMap()
@@ -541,7 +563,9 @@ const startTrip = async () => {
   routePoints.value = []
   nearbyPlaces.value = []
   tripStartTime.value = Date.now()
+  now.value = tripStartTime.value
   isTracking.value = true
+  startDurationTimer()
 
   // Initialize map
   await initializeMap()
@@ -598,6 +622,7 @@ const endTrip = () => {
   tripEndTime.value = Date.now()
   isTracking.value = false
   showTripReport.value = true
+  stopDurationTimer()
 
   // Save final data
   saveToLocalStorage()
@@ -755,6 +780,8 @@ onUnmounted(() => {
       radiusCircle.value.setMap(null)
     }
   }
+
+  stopDurationTimer()
 })
 </script>
 
@@ -1072,7 +1099,7 @@ onUnmounted(() => {
 /* Map Container */
 .map-container {
   position: relative;
-  height: clamp(260px, 55vw, 420px);
+  height: clamp(480px, 90vw, 780px);
   border-radius: inherit;
 }
 
@@ -1217,7 +1244,7 @@ onUnmounted(() => {
   }
 
   .map-container {
-    height: clamp(220px, 45vh, 320px);
+    height: clamp(390px, 82vh, 540px);
   }
 
   .location-coords,
@@ -1312,7 +1339,7 @@ onUnmounted(() => {
   }
 
   .map-container {
-    height: clamp(200px, 52vh, 280px);
+    height: clamp(360px, 90vh, 480px);
   }
 
   .current-stats {
@@ -1360,7 +1387,7 @@ onUnmounted(() => {
   }
 
   .map-container {
-    height: clamp(180px, 60vh, 260px);
+    height: clamp(330px, 98vh, 480px);
   }
 
   .current-stats {
