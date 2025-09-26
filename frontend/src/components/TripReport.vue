@@ -455,4 +455,199 @@ watch(() => props.isVisible, (newVal) => {
   font-size: 0.75rem;
   font-weight: 600;
 }
+
+/* iPhone and mobile responsiveness */
+@media (max-width: 768px) {
+  .modal-content {
+    width: 95%;
+    max-width: none;
+    max-height: 95vh;
+    margin: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+    border-radius: 8px;
+  }
+  
+  .modal-header {
+    padding: 16px;
+  }
+  
+  .modal-header h2 {
+    font-size: 1.25rem;
+  }
+  
+  .close-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 20px;
+  }
+  
+  .modal-body {
+    padding: 16px;
+  }
+  
+  .section {
+    margin-bottom: 20px;
+  }
+  
+  .section h3 {
+    font-size: 1.1rem;
+  }
+  
+  .overview-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .stat-value {
+    font-size: 1rem;
+  }
+  
+  .map-container {
+    height: 200px;
+  }
+  
+  .places-list {
+    gap: 10px;
+  }
+  
+  .place-item {
+    padding: 12px;
+  }
+  
+  .place-info h4 {
+    font-size: 1rem;
+  }
+  
+  .place-type {
+    font-size: 0.8rem;
+  }
+  
+  .place-rating, .place-distance {
+    font-size: 0.75rem;
+  }
+  
+  .summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .summary-card {
+    padding: 12px;
+  }
+  
+  .card-number {
+    font-size: 1.25rem;
+  }
+  
+  .card-label {
+    font-size: 0.8rem;
+  }
+  
+  .type-item {
+    padding: 6px 10px;
+  }
+  
+  .type-name {
+    font-size: 0.85rem;
+  }
+  
+  .type-count {
+    font-size: 0.7rem;
+    padding: 1px 6px;
+  }
+}
+
+/* iPhone specific optimizations */
+@media (max-width: 480px) {
+  .modal-content {
+    width: 98%;
+    margin: max(5px, env(safe-area-inset-top)) max(5px, env(safe-area-inset-right)) max(5px, env(safe-area-inset-bottom)) max(5px, env(safe-area-inset-left));
+    border-radius: 6px;
+  }
+  
+  .modal-header {
+    padding: 12px;
+  }
+  
+  .modal-header h2 {
+    font-size: 1.1rem;
+  }
+  
+  .close-btn {
+    width: 24px;
+    height: 24px;
+    font-size: 18px;
+  }
+  
+  .modal-body {
+    padding: 12px;
+  }
+  
+  .section {
+    margin-bottom: 16px;
+  }
+  
+  .section h3 {
+    font-size: 1rem;
+  }
+  
+  .overview-stats {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .stat-item {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .map-container {
+    height: 150px;
+  }
+  
+  .place-item {
+    padding: 10px;
+  }
+  
+  .place-info h4 {
+    font-size: 0.9rem;
+  }
+  
+  .summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  
+  .summary-card {
+    padding: 10px;
+  }
+  
+  .card-number {
+    font-size: 1.1rem;
+  }
+  
+  .card-label {
+    font-size: 0.75rem;
+  }
+}
+
+/* Landscape orientation for iPhone */
+@media (max-width: 768px) and (orientation: landscape) {
+  .modal-content {
+    width: 90%;
+    max-height: 90vh;
+  }
+  
+  .map-container {
+    height: 120px;
+  }
+  
+  .overview-stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .summary-cards {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
 </style>

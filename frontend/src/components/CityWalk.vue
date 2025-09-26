@@ -1146,22 +1146,208 @@ onUnmounted(() => {
   margin-bottom: 24px;
 }
 
-/* Mobile responsiveness */
+/* iPhone and mobile optimizations */
 @media (max-width: 768px) {
   .citywalk-app {
-    padding: 12px;
+    padding: 8px;
+    min-height: 100vh;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .header {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+  }
+  
+  .header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .status-indicator {
+    font-size: 0.75rem;
+    padding: 6px 12px;
   }
   
   .type-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  
+  .type-btn {
+    padding: 12px 8px;
+    font-size: 0.8rem;
+  }
+  
+  .type-icon {
+    font-size: 1.25rem;
+  }
+  
+  .controls {
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  
+  .btn {
+    padding: 14px 16px;
+    font-size: 0.9rem;
+    min-height: 44px; /* iOS touch target minimum */
   }
   
   .map-container {
-    height: 300px;
+    height: 250px;
+    margin-bottom: 16px;
+  }
+  
+  .map-overlay {
+    top: 8px;
+    left: 8px;
+    padding: 8px;
+  }
+  
+  .location-coords, .location-time {
+    font-size: 0.7rem;
   }
   
   .current-stats {
     grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .stat-card {
+    padding: 12px;
+  }
+  
+  .stat-value {
+    font-size: 1.25rem;
+  }
+  
+  .stat-label {
+    font-size: 0.8rem;
+  }
+  
+  .nearby-places, .recent-discoveries {
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .place-item, .discovery-item {
+    padding: 12px;
+  }
+  
+  .place-info h4, .discovery-info h4 {
+    font-size: 0.9rem;
+  }
+  
+  .place-type, .discovery-type {
+    font-size: 0.8rem;
+  }
+  
+  .place-rating, .place-distance, .place-vicinity, .discovery-time {
+    font-size: 0.75rem;
+  }
+}
+
+/* iPhone specific optimizations */
+@media (max-width: 480px) {
+  .citywalk-app {
+    padding: 6px;
+  }
+  
+  .header h1 {
+    font-size: 1.25rem;
+  }
+  
+  .type-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+  
+  .type-btn {
+    padding: 10px 6px;
+    font-size: 0.75rem;
+  }
+  
+  .type-icon {
+    font-size: 1rem;
+  }
+  
+  .btn {
+    padding: 12px 14px;
+    font-size: 0.85rem;
+  }
+  
+  .map-container {
+    height: 200px;
+  }
+  
+  .current-stats {
+    gap: 8px;
+  }
+  
+  .stat-card {
+    padding: 10px;
+  }
+  
+  .stat-value {
+    font-size: 1.1rem;
+  }
+  
+  .stat-label {
+    font-size: 0.75rem;
+  }
+}
+
+/* iPhone X/11/12/13/14/15 series safe area support */
+@supports (padding: max(0px)) {
+  .citywalk-app {
+    padding-left: max(8px, env(safe-area-inset-left));
+    padding-right: max(8px, env(safe-area-inset-right));
+    padding-top: max(8px, env(safe-area-inset-top));
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  
+  .header {
+    padding-top: max(0px, env(safe-area-inset-top));
+  }
+}
+
+/* Landscape orientation optimizations for iPhone */
+@media (max-width: 768px) and (orientation: landscape) {
+  .citywalk-app {
+    padding: 4px;
+  }
+  
+  .header {
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+  }
+  
+  .header h1 {
+    font-size: 1.2rem;
+  }
+  
+  .map-container {
+    height: 180px;
+    margin-bottom: 8px;
+  }
+  
+  .current-stats {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  
+  .stat-card {
+    padding: 8px;
+  }
+  
+  .stat-value {
+    font-size: 1rem;
+  }
+  
+  .stat-label {
+    font-size: 0.7rem;
   }
 }
 </style>

@@ -176,14 +176,94 @@ onUnmounted(() => {
   transform: translateX(100%);
 }
 
-/* Mobile responsiveness */
+/* iPhone and mobile responsiveness */
 @media (max-width: 640px) {
   .toast {
-    top: 10px;
-    right: 10px;
-    left: 10px;
+    top: max(10px, env(safe-area-inset-top));
+    right: max(10px, env(safe-area-inset-right));
+    left: max(10px, env(safe-area-inset-left));
     max-width: none;
     min-width: auto;
+    border-radius: 8px;
+  }
+  
+  .toast-content {
+    padding: 12px;
+    gap: 10px;
+  }
+  
+  .toast-icon {
+    font-size: 1.25rem;
+  }
+  
+  .toast-title {
+    font-size: 0.8rem;
+  }
+  
+  .toast-description {
+    font-size: 0.7rem;
+    line-height: 1.3;
+  }
+  
+  .toast-close {
+    width: 18px;
+    height: 18px;
+    font-size: 1rem;
+  }
+}
+
+/* iPhone specific optimizations */
+@media (max-width: 480px) {
+  .toast {
+    top: max(8px, env(safe-area-inset-top));
+    right: max(8px, env(safe-area-inset-right));
+    left: max(8px, env(safe-area-inset-left));
+    border-radius: 6px;
+  }
+  
+  .toast-content {
+    padding: 10px;
+    gap: 8px;
+  }
+  
+  .toast-icon {
+    font-size: 1.1rem;
+  }
+  
+  .toast-title {
+    font-size: 0.75rem;
+  }
+  
+  .toast-description {
+    font-size: 0.65rem;
+  }
+  
+  .toast-close {
+    width: 16px;
+    height: 16px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Landscape orientation for iPhone */
+@media (max-width: 640px) and (orientation: landscape) {
+  .toast {
+    top: max(5px, env(safe-area-inset-top));
+    right: max(5px, env(safe-area-inset-right));
+    left: max(5px, env(safe-area-inset-left));
+  }
+  
+  .toast-content {
+    padding: 8px;
+    gap: 8px;
+  }
+  
+  .toast-title {
+    font-size: 0.75rem;
+  }
+  
+  .toast-description {
+    font-size: 0.65rem;
   }
 }
 </style>
