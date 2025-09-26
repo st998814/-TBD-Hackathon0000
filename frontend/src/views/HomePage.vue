@@ -11,7 +11,7 @@ import CityWalk from '../components/CityWalk.vue'
 <style scoped>
 .home-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px 0;
+  /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
+  /* padding: 20px 0; */
 }
 </style>

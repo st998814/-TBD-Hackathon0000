@@ -1,14 +1,14 @@
 <template>
   <div class="citywalk-app">
-    <div class="header">
+    <header class="header card">
       <h1>🏃‍♂️ CityWalk</h1>
       <div class="status-indicator" :class="{ active: isTracking }">
         {{ isTracking ? 'Tracking Active' : 'Tracking Stopped' }}
       </div>
-    </div>
+    </header>
 
     <!-- Place Type Selection -->
-    <div class="place-type-selection" v-if="!isTracking">
+    <section class="place-type-selection card" v-if="!isTracking">
       <h3>What are you looking for?</h3>
       <div class="type-grid">
         <button
@@ -34,9 +34,43 @@
           class="radius-slider"
         />
       </div>
-    </div>
+    </section>
 
-    <div class="controls">
+    <!-- Current Location Info -->
+    <section class="location-info card" v-if="currentLocation">
+      <div class="location-coords">
+        📍 {{ currentLocation.lat.toFixed(6) }}, {{ currentLocation.lng.toFixed(6) }}
+      </div>
+      <div class="location-time">
+        ⏰ {{ new Date(currentLocation.timestamp).toLocaleTimeString() }}
+      </div>
+    </section>
+
+    <!-- Map Container -->
+    <section class="map-container card card--map" v-if="isTracking">
+      <div id="main-map" class="map"></div>
+    </section>
+
+    <section class="current-stats card" v-if="isTracking">
+      <div class="stat-card">
+        <div class="stat-value">{{ formatDuration(currentDuration) }}</div>
+        <div class="stat-label">Duration</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ formatDistance(currentDistance) }}</div>
+        <div class="stat-label">Distance</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ sessionDiscovered.length }}</div>
+        <div class="stat-label">New Places</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ nearbyPlaces.length }}</div>
+        <div class="stat-label">Nearby Places</div>
+      </div>
+    </section>
+
+    <section class="controls card">
       <button 
         v-if="!isTracking" 
         @click="startTrip" 
@@ -68,44 +102,10 @@
       >
         Demo Mode
       </button>
-    </div>
-
-    <!-- Map Container -->
-    <div class="map-container" v-if="isTracking">
-      <div id="main-map" class="map"></div>
-      <div class="map-overlay">
-        <div class="location-info">
-          <div class="location-coords">
-            📍 {{ currentLocation?.lat.toFixed(6) }}, {{ currentLocation?.lng.toFixed(6) }}
-          </div>
-          <div class="location-time">
-            ⏰ {{ currentLocation ? new Date(currentLocation.timestamp).toLocaleTimeString() : '' }}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="current-stats" v-if="isTracking">
-      <div class="stat-card">
-        <div class="stat-value">{{ formatDuration(currentDuration) }}</div>
-        <div class="stat-label">Duration</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value">{{ formatDistance(currentDistance) }}</div>
-        <div class="stat-label">Distance</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value">{{ sessionDiscovered.length }}</div>
-        <div class="stat-label">New Places</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value">{{ nearbyPlaces.length }}</div>
-        <div class="stat-label">Nearby Places</div>
-      </div>
-    </div>
+    </section>
 
     <!-- Nearby Places List -->
-    <div class="nearby-places" v-if="isTracking && nearbyPlaces.length > 0">
+    <section class="nearby-places card" v-if="isTracking && nearbyPlaces.length > 0">
       <h3>Nearby Places</h3>
       <div class="places-list">
         <div 
@@ -132,10 +132,10 @@
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
     <!-- Recent Discoveries -->
-    <div class="recent-discoveries" v-if="recentDiscoveries.length > 0">
+    <section class="recent-discoveries card" v-if="recentDiscoveries.length > 0">
       <h3>Recent Discoveries</h3>
       <div class="discoveries-list">
         <div 
@@ -150,7 +150,7 @@
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
     <!-- Toast Notifications -->
     <ToastNotification
@@ -760,45 +760,90 @@ onUnmounted(() => {
 
 <style scoped>
 .citywalk-app {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+  width: 100%;
+  margin: 0;
+  padding: clamp(16px, 4vw, 28px);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(12px, 3vw, 24px);
+  min-height: 100svh;
+  background: #f8fafc;
+  border-radius: 0;
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 18px;
+  padding: clamp(16px, 3vw, 24px);
+  box-shadow: 0 24px 40px -32px rgba(15, 23, 42, 0.45);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+
+.card:focus-within,
+.card:hover {
+  border-color: rgba(59, 130, 246, 0.35);
+  box-shadow: 0 28px 50px -30px rgba(59, 130, 246, 0.35);
+}
+
+.card--map {
+  padding: 0;
+  overflow: hidden;
+}
+
+@media (min-width: 1024px) {
+  .citywalk-app {
+    max-width: 960px;
+    margin: 0 auto;
+    border-radius: 32px;
+  }
 }
 
 .header {
+  position: sticky;
+  top: max(12px, env(safe-area-inset-top));
+  z-index: 20;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 2px solid #e5e7eb;
+  gap: clamp(12px, 4vw, 24px);
+  padding: clamp(12px, 3vw, 20px);
+  background: rgba(248, 250, 252, 0.92);
+  backdrop-filter: blur(18px);
 }
 
 .header h1 {
   margin: 0;
-  color: #1f2937;
-  font-size: 2rem;
+  color: #0f172a;
+  font-weight: 800;
+  font-size: clamp(1.5rem, 6vw, 2.4rem);
 }
 
 .status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 0.875rem;
+  border-radius: 999px;
+  font-size: clamp(0.75rem, 2.6vw, 0.9rem);
   font-weight: 600;
-  background: #f3f4f6;
-  color: #6b7280;
+  background: rgba(226, 232, 240, 0.8);
+  color: #475569;
+  letter-spacing: 0.01em;
 }
 
 .status-indicator.active {
-  background: #dcfce7;
-  color: #166534;
+  background: rgba(74, 222, 128, 0.18);
+  color: #047857;
 }
 
 .controls {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 12px;
-  margin-bottom: 24px;
+  align-items: center;
 }
 
 .btn {
@@ -809,11 +854,16 @@ onUnmounted(() => {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  touch-action: manipulation;
 }
 
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.controls .btn {
+  width: 100%;
 }
 
 .btn-primary {
@@ -856,7 +906,6 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 16px;
-  margin-bottom: 24px;
 }
 
 .stat-card {
@@ -880,31 +929,11 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
-.location-info {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 24px;
-}
-
-.location-info h3 {
-  margin: 0 0 12px 0;
-  color: #374151;
-  font-size: 1.125rem;
-}
-
-.location-info p {
-  margin: 4px 0;
-  color: #6b7280;
-  font-family: monospace;
-}
 
 .recent-discoveries {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .recent-discoveries h3 {
@@ -946,25 +975,23 @@ onUnmounted(() => {
 }
 
 /* Place Type Selection */
-.place-type-selection {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 24px;
-}
-
 .place-type-selection h3 {
   margin: 0 0 16px 0;
   color: #374151;
   font-size: 1.125rem;
 }
 
+.place-type-selection {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(12px, 3vw, 20px);
+}
+
 .type-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: clamp(12px, 3vw, 20px);
 }
 
 .type-btn {
@@ -979,6 +1006,7 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all 0.2s;
   font-size: 0.875rem;
+  width: 100%;
 }
 
 .type-btn:hover {
@@ -1044,11 +1072,8 @@ onUnmounted(() => {
 /* Map Container */
 .map-container {
   position: relative;
-  height: 400px;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  overflow: hidden;
-  margin-bottom: 24px;
+  height: clamp(260px, 55vw, 420px);
+  border-radius: inherit;
 }
 
 .map {
@@ -1056,31 +1081,23 @@ onUnmounted(() => {
   height: 100%;
 }
 
-.map-overlay {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 8px;
-  padding: 12px;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+.location-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .location-coords, .location-time {
-  font-size: 0.75rem;
-  color: #6b7280;
+  font-size: 0.85rem;
+  color: #475569;
   font-family: monospace;
-  margin: 2px 0;
 }
 
 /* Nearby Places */
 .nearby-places {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .nearby-places h3 {
@@ -1143,211 +1160,216 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 16px;
-  margin-bottom: 24px;
 }
 
-/* iPhone and mobile optimizations */
+/* Mobile-first adjustments */
 @media (max-width: 768px) {
   .citywalk-app {
-    padding: 8px;
-    min-height: 100vh;
-    padding-bottom: env(safe-area-inset-bottom);
+    padding: clamp(10px, 5vw, 18px);
+    gap: clamp(10px, 4vw, 18px);
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
   }
-  
+
   .header {
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-  }
-  
-  .header h1 {
-    font-size: 1.5rem;
-  }
-  
-  .status-indicator {
-    font-size: 0.75rem;
-    padding: 6px 12px;
-  }
-  
-  .type-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-  }
-  
-  .type-btn {
-    padding: 12px 8px;
-    font-size: 0.8rem;
-  }
-  
-  .type-icon {
-    font-size: 1.25rem;
-  }
-  
-  .controls {
-    gap: 8px;
-    margin-bottom: 16px;
-  }
-  
-  .btn {
-    padding: 14px 16px;
-    font-size: 0.9rem;
-    min-height: 44px; /* iOS touch target minimum */
-  }
-  
-  .map-container {
-    height: 250px;
-    margin-bottom: 16px;
-  }
-  
-  .map-overlay {
-    top: 8px;
-    left: 8px;
-    padding: 8px;
-  }
-  
-  .location-coords, .location-time {
-    font-size: 0.7rem;
-  }
-  
-  .current-stats {
-    grid-template-columns: repeat(2, 1fr);
+    flex-direction: column;
+    align-items: flex-start;
     gap: 12px;
-    margin-bottom: 16px;
   }
-  
+
+  .status-indicator {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .type-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: clamp(220px, 50vh, 280px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.6) transparent;
+  }
+
+  .type-grid::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .type-btn {
+    padding: 14px 10px;
+    font-size: 0.85rem;
+  }
+
+  .controls {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    position: sticky;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    z-index: 18;
+    background: rgba(248, 250, 252, 0.95);
+    backdrop-filter: blur(16px);
+  }
+
+  .btn {
+    padding: 14px 18px;
+    font-size: 0.95rem;
+    min-height: 48px;
+  }
+
+  .map-container {
+    height: clamp(220px, 45vh, 320px);
+  }
+
+  .location-coords,
+  .location-time {
+    font-size: 0.72rem;
+  }
+
+  .current-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
   .stat-card {
     padding: 12px;
   }
-  
-  .stat-value {
-    font-size: 1.25rem;
+
+  .nearby-places,
+  .recent-discoveries {
+    gap: 12px;
   }
-  
-  .stat-label {
+
+  .places-list,
+  .discoveries-list {
+    gap: 10px;
+  }
+
+  .place-item,
+  .discovery-item {
+    padding: 14px;
+  }
+
+  .place-info h4,
+  .discovery-info h4 {
+    font-size: 0.95rem;
+  }
+
+  .place-type,
+  .discovery-type,
+  .place-rating,
+  .place-distance,
+  .place-vicinity,
+  .discovery-time {
     font-size: 0.8rem;
-  }
-  
-  .nearby-places, .recent-discoveries {
-    padding: 16px;
-    margin-bottom: 16px;
-  }
-  
-  .place-item, .discovery-item {
-    padding: 12px;
-  }
-  
-  .place-info h4, .discovery-info h4 {
-    font-size: 0.9rem;
-  }
-  
-  .place-type, .discovery-type {
-    font-size: 0.8rem;
-  }
-  
-  .place-rating, .place-distance, .place-vicinity, .discovery-time {
-    font-size: 0.75rem;
   }
 }
 
-/* iPhone specific optimizations */
+/* Compact phones */
 @media (max-width: 480px) {
   .citywalk-app {
-    padding: 6px;
+    padding: clamp(8px, 5vw, 14px);
   }
-  
+
+  .header {
+    gap: 10px;
+    top: max(8px, env(safe-area-inset-top));
+  }
+
   .header h1 {
-    font-size: 1.25rem;
+    font-size: clamp(1.3rem, 7vw, 1.6rem);
   }
-  
+
+  .status-indicator {
+    font-size: 0.78rem;
+    padding: 6px 12px;
+  }
+
   .type-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    max-height: 240px;
   }
-  
+
   .type-btn {
-    padding: 10px 6px;
-    font-size: 0.75rem;
-  }
-  
-  .type-icon {
-    font-size: 1rem;
-  }
-  
-  .btn {
-    padding: 12px 14px;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 12px;
     font-size: 0.85rem;
+    gap: 12px;
   }
-  
-  .map-container {
-    height: 200px;
+
+  .type-icon {
+    font-size: 1.3rem;
   }
-  
-  .current-stats {
+
+  .controls {
     gap: 8px;
   }
-  
+
+  .btn {
+    font-size: 0.9rem;
+    padding: 12px 16px;
+  }
+
+  .map-container {
+    height: clamp(200px, 52vh, 280px);
+  }
+
+  .current-stats {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
   .stat-card {
-    padding: 10px;
-  }
-  
-  .stat-value {
-    font-size: 1.1rem;
-  }
-  
-  .stat-label {
-    font-size: 0.75rem;
+    padding: 12px;
+    text-align: left;
   }
 }
 
 /* iPhone X/11/12/13/14/15 series safe area support */
 @supports (padding: max(0px)) {
   .citywalk-app {
-    padding-left: max(8px, env(safe-area-inset-left));
-    padding-right: max(8px, env(safe-area-inset-right));
-    padding-top: max(8px, env(safe-area-inset-top));
-    padding-bottom: max(8px, env(safe-area-inset-bottom));
-  }
-  
-  .header {
-    padding-top: max(0px, env(safe-area-inset-top));
+    padding-left: max(env(safe-area-inset-left), clamp(12px, 4vw, 28px));
+    padding-right: max(env(safe-area-inset-right), clamp(12px, 4vw, 28px));
+    padding-top: max(env(safe-area-inset-top), clamp(12px, 4vw, 28px));
+    padding-bottom: max(env(safe-area-inset-bottom), clamp(18px, 5vw, 28px));
   }
 }
 
 /* Landscape orientation optimizations for iPhone */
 @media (max-width: 768px) and (orientation: landscape) {
   .citywalk-app {
-    padding: 4px;
+    padding: clamp(6px, 3vw, 12px);
+    gap: 10px;
   }
-  
+
   .header {
-    margin-bottom: 8px;
-    padding-bottom: 8px;
+    position: static;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
   }
-  
+
   .header h1 {
-    font-size: 1.2rem;
+    font-size: clamp(1.2rem, 4vw, 1.6rem);
   }
-  
+
+  .status-indicator {
+    width: auto;
+    padding: 6px 12px;
+  }
+
   .map-container {
-    height: 180px;
-    margin-bottom: 8px;
+    height: clamp(180px, 60vh, 260px);
   }
-  
+
   .current-stats {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
-    margin-bottom: 8px;
   }
-  
+
   .stat-card {
-    padding: 8px;
-  }
-  
-  .stat-value {
-    font-size: 1rem;
-  }
-  
-  .stat-label {
-    font-size: 0.7rem;
+    padding: 10px;
   }
 }
 </style>
