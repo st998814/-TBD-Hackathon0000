@@ -1,6 +1,6 @@
 <template>
   <div class="citywalk-app">
-    <header class="header card">
+    <header class="header card" :class="{ 'header--compact': isHeaderCompact }">
       <h1>🏃‍♂️ CityWalk</h1>
       <div class="status-indicator" :class="{ active: isTracking }">
         {{ isTracking ? 'Tracking Active' : 'Tracking Stopped' }}
@@ -203,6 +203,7 @@ const showTripReport = ref(false)
 const watchId = ref(null)
 const now = ref(Date.now())
 const durationTimer = ref(null)
+const isHeaderCompact = ref(false)
 
 // Place discovery state
 const selectedPlaceTypes = ref(['restaurant', 'cafe'])
@@ -270,6 +271,10 @@ const stopDurationTimer = () => {
     clearInterval(durationTimer.value)
     durationTimer.value = null
   }
+}
+
+const handleScroll = () => {
+  isHeaderCompact.value = window.scrollY > 96
 }
 
 const togglePlaceType = (type) => {
@@ -762,6 +767,9 @@ onMounted(() => {
   
   // Load saved data
   loadFromLocalStorage()
+
+  handleScroll()
+  window.addEventListener('scroll', handleScroll, { passive: true })
 })
 
 onUnmounted(() => {
@@ -782,6 +790,7 @@ onUnmounted(() => {
   }
 
   stopDurationTimer()
+  window.removeEventListener('scroll', handleScroll)
 })
 </script>
 
@@ -829,16 +838,23 @@ onUnmounted(() => {
 }
 
 .header {
-  position: sticky;
-  top: max(12px, env(safe-area-inset-top));
-  z-index: 20;
+  position: relative;
+  z-index: 10;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: clamp(12px, 4vw, 24px);
-  padding: clamp(12px, 3vw, 20px);
-  background: rgba(248, 250, 252, 0.92);
-  backdrop-filter: blur(18px);
+  padding: clamp(14px, 3vw, 22px);
+  background: rgba(248, 250, 252, 0.95);
+  backdrop-filter: blur(12px);
+  transition: padding 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
+}
+
+.header--compact {
+  padding: clamp(8px, 2vw, 14px);
+  gap: clamp(8px, 3vw, 16px);
+  opacity: 0.82;
+  transform: translateY(-8px);
 }
 
 .header h1 {
@@ -846,6 +862,10 @@ onUnmounted(() => {
   color: #0f172a;
   font-weight: 800;
   font-size: clamp(1.5rem, 6vw, 2.4rem);
+}
+
+.header--compact h1 {
+  font-size: clamp(1.1rem, 5vw, 1.6rem);
 }
 
 .status-indicator {
@@ -866,11 +886,23 @@ onUnmounted(() => {
   color: #047857;
 }
 
+.header--compact .status-indicator {
+  padding: 6px 12px;
+  font-size: clamp(0.7rem, 2.2vw, 0.8rem);
+}
+
 .controls {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
   align-items: center;
+}
+
+.controls.card {
+  padding: clamp(8px, 2vw, 14px);
+  border-radius: 14px;
+  background: rgba(248, 250, 252, 0.88);
+  box-shadow: 0 14px 24px -28px rgba(15, 23, 42, 0.4);
 }
 
 .btn {
@@ -891,6 +923,8 @@ onUnmounted(() => {
 
 .controls .btn {
   width: 100%;
+  padding: 9px 14px;
+  font-size: 0.9rem;
 }
 
 .btn-primary {
@@ -1229,18 +1263,22 @@ onUnmounted(() => {
 
   .controls {
     grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 6px;
     position: sticky;
-    bottom: max(16px, env(safe-area-inset-bottom));
+    bottom: max(10px, env(safe-area-inset-bottom));
     z-index: 18;
-    background: rgba(248, 250, 252, 0.95);
-    backdrop-filter: blur(16px);
+    background: rgba(248, 250, 252, 0.88);
+    backdrop-filter: blur(10px);
+  }
+
+  .controls.card {
+    padding: clamp(8px, 2.8vw, 12px);
   }
 
   .btn {
-    padding: 14px 18px;
-    font-size: 0.95rem;
-    min-height: 48px;
+    padding: 12px 16px;
+    font-size: 0.92rem;
+    min-height: 44px;
   }
 
   .map-container {
