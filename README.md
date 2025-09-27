@@ -105,7 +105,7 @@ Utility library containing:
 3. See route visualization and statistics
 4. Review all discovered places
 
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables
 The app uses a Google Maps API key (currently hardcoded for demo). In production:
@@ -182,6 +182,6 @@ npm run preview
 - **Analytics**: Trip history and statistics
 - **Export Features**: Download trip data as GPX/KML
 
-## 📄 License
+## License
 
 This project is created for hackathon purposes. Please ensure compliance with Google Maps API terms of service when deploying.
