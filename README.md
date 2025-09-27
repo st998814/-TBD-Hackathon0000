@@ -13,7 +13,7 @@ A Vue 3 + Vite web application that allows users to discover nearby places while
 
 ### Place Discovery
 - **Place Type Selection**: Choose from 6 predefined types (restaurant, cafe, shopping_mall, supermarket, convenience_store, bakery)
-- **Configurable Search Radius**: Adjustable from 100m to 300m (default 150m)
+- **Configurable Search Radius**: Adjustable from 50m to 500m (default 150m)
 - **Real-time Discovery**: Shows nearby places as you walk
 - **Discovery Notifications**: Toast notifications when new places are found
 - **Place Deduplication**: Prevents duplicate discoveries using place_id
