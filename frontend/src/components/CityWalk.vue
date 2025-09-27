@@ -2,8 +2,13 @@
   <div class="citywalk-app">
     <header class="header card" :class="{ 'header--compact': isHeaderCompact }">
       <h1>🏃‍♂️ CityWalk</h1>
-      <div class="status-indicator" :class="{ active: isTracking }">
-        {{ isTracking ? 'Tracking Active' : 'Tracking Stopped' }}
+      <div class="status-container">
+        <div class="status-indicator" :class="{ active: isTracking }">
+          {{ isTracking ? 'Tracking Active' : 'Tracking Stopped' }}
+        </div>
+        <div class="network-indicator" :class="{ online: isOnline, offline: !isOnline }">
+          {{ isOnline ? '🟢 Online' : '🔴 Offline' }}
+        </div>
       </div>
     </header>
 
@@ -204,6 +209,13 @@ const watchId = ref(null)
 const now = ref(Date.now())
 const durationTimer = ref(null)
 const isHeaderCompact = ref(false)
+
+// Network state management
+const isOnline = ref(navigator.onLine)
+const lastKnownLocation = ref(null)
+const lastKnownTimestamp = ref(null)
+const networkErrorCount = ref(0)
+const maxNetworkRetries = ref(3)
 
 // Place discovery state
 const selectedPlaceTypes = ref(['restaurant', 'cafe'])
@@ -438,20 +450,37 @@ const handleGeolocationError = (error) => {
       errorMessage = error.message || 'Failed to get location'
   }
   
-  // Stop tracking on error
-  if (watchId.value) {
-    navigator.geolocation.clearWatch(watchId.value)
-    watchId.value = null
-  }
-  
-  isTracking.value = false
-  
-  toastTitle.value = 'Location Error'
-  toastDescription.value = errorMessage
-  toastType.value = 'error'
-  showToast.value = true
+  // Only stop tracking if we have too many network errors
+  if (networkErrorCount.value >= maxNetworkRetries.value) {
+    // Stop tracking on persistent error
+    if (watchId.value) {
+      navigator.geolocation.clearWatch(watchId.value)
+      watchId.value = null
+    }
+    
+    isTracking.value = false
+    
+    toastTitle.value = 'Location Error'
+    toastDescription.value = errorMessage
+    toastType.value = 'error'
+    showToast.value = true
 
-  stopDurationTimer()
+    stopDurationTimer()
+  } else {
+    // Increment error count and show network warning
+    networkErrorCount.value++
+    
+    toastTitle.value = 'Network Issue'
+    toastDescription.value = 'Having trouble connecting. Keeping last known location...'
+    toastType.value = 'warning'
+    showToast.value = true
+    
+    // Keep tracking but use last known location
+    if (lastKnownLocation.value) {
+      currentLocation.value = lastKnownLocation.value
+      updateUserLocation(lastKnownLocation.value.lat, lastKnownLocation.value.lng)
+    }
+  }
 }
 
 const startTestMode = async () => {
@@ -587,6 +616,14 @@ const startTrip = async () => {
         timestamp
       }
 
+      // Save last known location for offline scenarios
+      lastKnownLocation.value = {
+        lat: latitude,
+        lng: longitude,
+        timestamp
+      }
+      lastKnownTimestamp.value = timestamp
+
       // Add to route points
       routePoints.value.push({
         lat: latitude,
@@ -677,6 +714,9 @@ const checkForNearbyPlaces = async (lat, lng, timestamp) => {
       selectedPlaceTypes.value
     )
 
+    // Reset network error count on successful API call
+    networkErrorCount.value = 0
+
     // Update nearby places list
     nearbyPlaces.value = places
 
@@ -704,6 +744,7 @@ const checkForNearbyPlaces = async (lat, lng, timestamp) => {
 
   } catch (error) {
     console.error('Error checking for nearby places:', error)
+    // Don't increment error count for Places API errors, only for location errors
   }
 }
 
@@ -732,7 +773,10 @@ const saveToLocalStorage = () => {
     searchRadius: searchRadius.value,
     tripStartTime: tripStartTime.value,
     tripEndTime: tripEndTime.value,
-    isTracking: isTracking.value
+    isTracking: isTracking.value,
+    lastKnownLocation: lastKnownLocation.value,
+    lastKnownTimestamp: lastKnownTimestamp.value,
+    networkErrorCount: networkErrorCount.value
   }
   
   localStorage.setItem('citywalk-data', JSON.stringify(data))
@@ -751,6 +795,9 @@ const loadFromLocalStorage = () => {
       searchRadius.value = parsed.searchRadius || 150
       tripStartTime.value = parsed.tripStartTime || 0
       tripEndTime.value = parsed.tripEndTime || 0
+      lastKnownLocation.value = parsed.lastKnownLocation || null
+      lastKnownTimestamp.value = parsed.lastKnownTimestamp || null
+      networkErrorCount.value = parsed.networkErrorCount || 0
       
       // Don't restore tracking state for security reasons
       isTracking.value = false
@@ -758,6 +805,37 @@ const loadFromLocalStorage = () => {
   } catch (error) {
     console.error('Error loading data from localStorage:', error)
   }
+}
+
+// Network event handlers
+const handleOnline = () => {
+  isOnline.value = true
+  networkErrorCount.value = 0
+  
+  // Show reconnection toast
+  toastTitle.value = 'Connection Restored'
+  toastDescription.value = 'Network connection is back online!'
+  toastType.value = 'success'
+  showToast.value = true
+  
+  // If we were tracking and have a last known location, try to resume
+  if (isTracking.value && lastKnownLocation.value) {
+    currentLocation.value = lastKnownLocation.value
+    updateUserLocation(lastKnownLocation.value.lat, lastKnownLocation.value.lng)
+    
+    // Try to check for nearby places again
+    checkForNearbyPlaces(lastKnownLocation.value.lat, lastKnownLocation.value.lng, lastKnownTimestamp.value)
+  }
+}
+
+const handleOffline = () => {
+  isOnline.value = false
+  
+  // Show offline warning
+  toastTitle.value = 'Connection Lost'
+  toastDescription.value = 'Working offline. Trip continues with last known location.'
+  toastType.value = 'warning'
+  showToast.value = true
 }
 
 // Lifecycle hooks
@@ -770,6 +848,10 @@ onMounted(() => {
 
   handleScroll()
   window.addEventListener('scroll', handleScroll, { passive: true })
+  
+  // Add network event listeners
+  window.addEventListener('online', handleOnline)
+  window.addEventListener('offline', handleOffline)
 })
 
 onUnmounted(() => {
@@ -791,6 +873,10 @@ onUnmounted(() => {
 
   stopDurationTimer()
   window.removeEventListener('scroll', handleScroll)
+  
+  // Remove network event listeners
+  window.removeEventListener('online', handleOnline)
+  window.removeEventListener('offline', handleOffline)
 })
 </script>
 
@@ -850,6 +936,13 @@ onUnmounted(() => {
   transition: padding 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
 }
 
+.status-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
 .header--compact {
   padding: clamp(8px, 2vw, 14px);
   gap: clamp(8px, 3vw, 16px);
@@ -889,6 +982,34 @@ onUnmounted(() => {
 .header--compact .status-indicator {
   padding: 6px 12px;
   font-size: clamp(0.7rem, 2.2vw, 0.8rem);
+}
+
+.network-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: clamp(0.65rem, 2vw, 0.75rem);
+  font-weight: 500;
+  background: rgba(226, 232, 240, 0.6);
+  color: #64748b;
+  letter-spacing: 0.01em;
+}
+
+.network-indicator.online {
+  background: rgba(74, 222, 128, 0.15);
+  color: #047857;
+}
+
+.network-indicator.offline {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+}
+
+.header--compact .network-indicator {
+  padding: 3px 6px;
+  font-size: clamp(0.6rem, 1.8vw, 0.7rem);
 }
 
 .controls {
@@ -1237,7 +1358,18 @@ onUnmounted(() => {
     gap: 12px;
   }
 
+  .status-container {
+    width: 100%;
+    align-items: stretch;
+    gap: 8px;
+  }
+
   .status-indicator {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .network-indicator {
     width: 100%;
     justify-content: center;
   }
