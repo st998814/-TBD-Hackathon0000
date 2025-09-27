@@ -1,8 +1,46 @@
 # CityMouse - Location-Based Discovery App
 
-A Vue 3 + Vite web application that allows users to discover nearby places while walking, similar to Pokémon GO's discovery experience. Built with Google Maps and Places API integration.
+A Vue 3 + Vite web application that merges Google Maps and Pokémon GO concepts, allowing users to discover nearby places while walking around the c- Data Storage**: All data stored in browser localStorage
 
-##  Features
+## Design Features
+
+- **Modern UI**: Clean, card-based design with subtle shadows
+- **Color System**: Consistent blue/green color scheme
+- **Typography**: System fonts for optimal performance
+- **Animations**: Smooth transitions and hover effects
+- **Accessibility**: Proper contrast ratios and semantic HTML
+
+## Future Enhancements
+
+With further development, this app can provide enhanced features:ckpacker. Built with Google Maps and Places API integration.
+
+## Hackathon Judging Criteria
+
+### Polish, Design, and Execution 
+- **Working MVP**: Fully functional product with one core service
+- **Strong Implementation**: Runs smoothly without major bugs
+- **Clean Architecture**: Vue 3 + Vite with modern design patterns
+
+### Originality and Creativity 
+- **Brand New Concept**: Innovative merger of Google Maps and Pokémon GO
+- **Unique Discovery Experience**: Explore cities with serendipitous place discovery
+- **Fun & Engaging**: Gamified exploration makes traveling more entertaining
+
+### Alignment with Theme 
+- **Perfect "Merger"**: Clearly combines two established concepts (Maps + Location Gaming)
+- **Concept Integration**: Theme expressed throughout the project's design and execution
+
+### Usability 
+- **Simplified Interface**: Minimal design with only essential buttons (start/end)
+- **User-Friendly**: Intuitive controls and clear functionality
+- **Smart Notifications**: Pop-up alerts when approaching places of interest
+
+### Impact and Potential 
+- **Future Development**: Can be enhanced with filters and advanced features
+- **Real-World Application**: Helpful for travelers exploring new cities
+- **Serendipitous Discovery**: Enables exploration by pure luck and chance
+
+## Features
 
 ### Core Functionality
 - **Real-time Location Tracking**: Uses browser geolocation API with `watchPosition` for continuous tracking
@@ -29,7 +67,7 @@ A Vue 3 + Vite web application that allows users to discover nearby places while
 - **Comprehensive Reports**: Includes statistics, place type distribution, and route map
 - **Data Persistence**: Saves data to localStorage for session recovery
 
-## 🛠️ Technical Implementation
+## Technical Implementation
 
 ### Architecture
 - **Frontend**: Vue 3 with Composition API
@@ -79,10 +117,10 @@ Utility library containing:
 ### Discovery Algorithm
 
 1. **Location Update**: User position changes trigger discovery check
-2. **Throttling Check**: Verify if query should be made (distance/time thresholds)
+2. **Throttling Check**: Verify if query should be made (distance/time thresholds)  
 3. **API Query**: Search Google Places API for nearby locations
 4. **New Place Detection**: Compare with previously discovered places
-5. **Notification**: Show toast for new discoveries
+5. **Smart Notification**: Pop-up alerts when approaching places of interest
 6. **Map Update**: Add markers and update UI
 
 ## Usage
@@ -130,7 +168,7 @@ Adjustable in `PlacesService` class:
 - `minDistanceThreshold`: 30 meters
 - `cacheTimeout`: 25 seconds
 
-## 📱 Mobile Support
+## Mobile Support
 
 The app is fully responsive and works on mobile devices:
 - Touch-friendly interface
@@ -173,14 +211,14 @@ npm run preview
 - **Animations**: Smooth transitions and hover effects
 - **Accessibility**: Proper contrast ratios and semantic HTML
 
-## Future Enhancements
+## 🚀 Future Enhancements
 
-- **Offline Support**: Cache map tiles and place data
+With further development, this app can provide enhanced features:
+- **Advanced Filtering**: More place type options and discovery filters
 - **Social Features**: Share discoveries with friends
-- **Advanced Filtering**: More place type options
+- **Offline Support**: Cache map tiles and place data for remote exploration
 - **Route Planning**: Suggest optimal discovery routes
-- **Analytics**: Trip history and statistics
-- **Export Features**: Download trip data as GPX/KML
+- **Analytics**: Trip history, statistics, and personal discovery insights
 
 ## License
 
