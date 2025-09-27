@@ -70,6 +70,74 @@ export const formatDuration = (milliseconds) => {
 }
 
 /**
+ * Map our interest types to Google Places API types
+ * @param {Array} interestTypes - Array of our interest types
+ * @returns {Array} Array of Google Places API types
+ */
+export const mapInterestTypesToGoogleTypes = (interestTypes) => {
+  const typeMapping = {
+    // Basic amenities
+    'toilet': ['restroom'],
+    'shopping': ['store', 'shopping_mall', 'clothing_store'],
+    'food': ['restaurant', 'food'],
+    'coffee': ['cafe'],
+    'dessert': ['bakery', 'dessert'],
+    'markets': ['supermarket', 'convenience_store'],
+    'bookstores': ['book_store', 'library'],
+    
+    // Services (these are harder to map directly)
+    'free_wifi': ['cafe', 'library', 'restaurant'], // Places with WiFi
+    'charging_spots': ['cafe', 'library', 'restaurant'], // Places with charging
+    'parking': ['parking'], // Direct mapping
+    'accessible': [], // This would need to be filtered from results
+    
+    // Price levels (these need filtering from results)
+    'budget_friendly': [], // Filter by price_level
+    'luxury': [], // Filter by price_level
+    
+    // Activities
+    'photo_spots': ['tourist_attraction', 'park', 'museum'],
+    'music': ['night_club', 'bar'],
+    'film': ['movie_theater'],
+    'anime': [], // No direct mapping
+    'gaming': ['amusement_park', 'bowling_alley'],
+    'comedy': ['night_club', 'bar'],
+    'arts': ['art_gallery', 'museum'],
+    'fashion': ['clothing_store', 'shopping_mall'],
+    'health': ['hospital', 'pharmacy', 'gym'],
+    'sports_fitness': ['gym', 'stadium', 'sports_complex'],
+    'hiking': ['park', 'tourist_attraction'],
+    'parks': ['park'],
+    'museums': ['museum'],
+    'live_music': ['night_club', 'bar'],
+    'nightlife': ['night_club', 'bar'],
+    
+    // Demographics (these need filtering)
+    'family_friendly': [], // Filter from results
+    'pet_friendly': [], // Filter from results
+    
+    // Categories
+    'travel_outdoor': ['park', 'tourist_attraction', 'campground'],
+    'community': ['church', 'library', 'community_center'],
+    'charities_causes': ['church', 'community_center'],
+    'government': ['city_hall', 'courthouse', 'embassy'],
+    'home_lifestyle': ['furniture_store', 'home_goods_store'],
+    'seasonal': [], // No direct mapping
+    'science_tech': ['university', 'library'],
+    'film_media': ['movie_theater', 'library']
+  }
+  
+  const googleTypes = []
+  interestTypes.forEach(interest => {
+    const mappedTypes = typeMapping[interest] || []
+    googleTypes.push(...mappedTypes)
+  })
+  
+  // Remove duplicates
+  return [...new Set(googleTypes)]
+}
+
+/**
  * Get readable place type from Google Places API types
  * @param {Array} types - Array of place types from Google Places API
  * @returns {string} Readable place type
@@ -108,7 +176,23 @@ export const getPlaceType = (types) => {
     'night_club': 'Night Club',
     'spa': 'Spa',
     'zoo': 'Zoo',
-    'aquarium': 'Aquarium'
+    'aquarium': 'Aquarium',
+    'restroom': 'Restroom',
+    'parking': 'Parking',
+    'art_gallery': 'Art Gallery',
+    'stadium': 'Stadium',
+    'sports_complex': 'Sports Complex',
+    'city_hall': 'City Hall',
+    'courthouse': 'Courthouse',
+    'embassy': 'Embassy',
+    'furniture_store': 'Furniture Store',
+    'home_goods_store': 'Home Goods Store',
+    'university': 'University',
+    'community_center': 'Community Center',
+    'campground': 'Campground',
+    'amusement_park': 'Amusement Park',
+    'bowling_alley': 'Bowling Alley',
+    'bakery': 'Bakery'
   }
   
   const firstType = types[0]
@@ -381,11 +465,14 @@ export class PlacesService {
   constructor() {
     this.service = null
     this.cache = new Map()
-    this.cacheTimeout = 25000 // 25 seconds TTL
+    this.cacheTimeout = 300000 // 5 minutes TTL for large radius searches
     this.lastQueryTime = 0
     this.lastQueryLocation = null
-    this.minQueryInterval = 20000 // 20 seconds
-    this.minDistanceThreshold = 30 // 30 meters
+    this.minQueryInterval = 60000 // 1 minute minimum interval
+    this.minDistanceThreshold = 500 // 500 meters - only search again if moved this far
+    this.lastLargeRadiusSearch = null // Track last large radius search
+    this.largeRadiusSearchRadius = 1000 // 1km initial search radius
+    this.currentPlacesCache = new Map() // Cache for current area places
   }
 
   /**
@@ -402,34 +489,39 @@ export class PlacesService {
   }
 
   /**
-   * Check if we should query based on throttling rules
+   * Check if we should query based on distance-based strategy
    * @param {number} lat - Current latitude
    * @param {number} lng - Current longitude
-   * @returns {boolean} Whether to query
+   * @returns {Object} Query decision with reason
    */
   shouldQuery(lat, lng) {
     const now = Date.now()
     const timeSinceLastQuery = now - this.lastQueryTime
     
-    // Check time threshold
-    if (timeSinceLastQuery < this.minQueryInterval) {
-      return false
+    // If no previous search, definitely search
+    if (!this.lastQueryLocation) {
+      return { shouldQuery: true, reason: 'first_search' }
     }
     
-    // Check distance threshold
-    if (this.lastQueryLocation) {
-      const distance = calculateDistance(
-        this.lastQueryLocation.lat,
-        this.lastQueryLocation.lng,
-        lat,
-        lng
-      )
-      if (distance < this.minDistanceThreshold) {
-        return false
-      }
+    // Check distance from last search location
+    const distanceFromLastSearch = calculateDistance(
+      this.lastQueryLocation.lat,
+      this.lastQueryLocation.lng,
+      lat,
+      lng
+    )
+    
+    // If moved more than 500m from last search, search again
+    if (distanceFromLastSearch >= this.minDistanceThreshold) {
+      return { shouldQuery: true, reason: 'moved_far_enough' }
     }
     
-    return true
+    // If time has passed and we're near the edge of our search area
+    if (timeSinceLastQuery > this.minQueryInterval) {
+      return { shouldQuery: true, reason: 'time_based_refresh' }
+    }
+    
+    return { shouldQuery: false, reason: 'within_search_area' }
   }
 
   /**
@@ -457,44 +549,95 @@ export class PlacesService {
   }
 
   /**
-   * Search for nearby places
+   * Filter places within user's search radius from cached large radius search
+   * @param {number} userLat - User's current latitude
+   * @param {number} userLng - User's current longitude
+   * @param {number} userRadius - User's search radius in meters
+   * @param {Array} types - Place types to filter
+   * @returns {Array} Filtered places within user's radius
+   */
+  filterPlacesWithinRadius(userLat, userLng, userRadius, types) {
+    const filteredPlaces = []
+    
+    // Get all cached places from the large radius search
+    for (const [cacheKey, cacheEntry] of this.cache.entries()) {
+      if (this.isCacheValid(cacheEntry) && cacheEntry.data) {
+        cacheEntry.data.forEach(place => {
+          // Calculate distance from user's current location
+          const distance = calculateDistance(userLat, userLng, place.lat, place.lng)
+          
+          // Check if place is within user's radius
+          if (distance <= userRadius) {
+            // Check if place matches any of the requested types
+            const matchesType = types.length === 0 || types.some(type => 
+              place.types && place.types.includes(type)
+            )
+            
+            if (matchesType) {
+              // Update distance to current user location
+              const updatedPlace = {
+                ...place,
+                distance: distance
+              }
+              filteredPlaces.push(updatedPlace)
+            }
+          }
+        })
+      }
+    }
+    
+    // Remove duplicates based on place_id
+    const uniquePlaces = filteredPlaces.filter((place, index, self) => 
+      index === self.findIndex(p => p.place_id === place.place_id)
+    )
+    
+    // Sort by distance
+    return uniquePlaces.sort((a, b) => a.distance - b.distance)
+  }
+
+  /**
+   * Search for nearby places with optimized strategy
    * @param {number} lat - Latitude
    * @param {number} lng - Longitude
-   * @param {number} radius - Search radius in meters
+   * @param {number} userRadius - User's search radius in meters
    * @param {Array} types - Place types to search for
    * @returns {Promise<Array>} Array of places
    */
-  async searchNearbyPlaces(lat, lng, radius = 150, types = ['restaurant', 'cafe']) {
+  async searchNearbyPlaces(lat, lng, userRadius = 150, types = ['restaurant', 'cafe']) {
     if (!this.service) {
       await this.initialize()
     }
 
-    // Check throttling
-    if (!this.shouldQuery(lat, lng)) {
-      console.log('Query throttled - using cache or skipping')
-      return []
+    // Check if we should query based on distance strategy
+    const queryDecision = this.shouldQuery(lat, lng)
+    console.log('Query decision:', queryDecision)
+
+    // If we have cached data and don't need to query, filter from cache
+    if (!queryDecision.shouldQuery) {
+      const cachedPlaces = this.filterPlacesWithinRadius(lat, lng, userRadius, types)
+      console.log(`Using cached data: ${cachedPlaces.length} places within ${userRadius}m`)
+      return cachedPlaces
     }
 
-    // Check cache
-    const cacheKey = this.getCacheKey(lat, lng, radius, types)
-    const cachedResult = this.cache.get(cacheKey)
-    if (cachedResult && this.isCacheValid(cachedResult)) {
-      console.log('Using cached result')
-      return cachedResult.data
-    }
+    // Need to perform a new search - use large radius (1km)
+    const searchRadius = this.largeRadiusSearchRadius
+    const cacheKey = this.getCacheKey(lat, lng, searchRadius, types)
 
     try {
       // Update query tracking
       this.lastQueryTime = Date.now()
       this.lastQueryLocation = { lat, lng }
+      this.lastLargeRadiusSearch = { lat, lng, timestamp: Date.now() }
 
-      // Create request
+      // Create request for large radius search
       const request = {
         location: new google.maps.LatLng(lat, lng),
-        radius: radius,
+        radius: searchRadius,
         type: types.length === 1 ? types[0] : undefined,
         types: types.length > 1 ? types : undefined
       }
+
+      console.log(`Performing large radius search: ${searchRadius}m for types:`, types)
 
       // Execute search
       const results = await new Promise((resolve, reject) => {
@@ -522,14 +665,17 @@ export class PlacesService {
         photos: place.photos || []
       }))
 
-      // Cache results
+      // Cache the large radius results
       this.cache.set(cacheKey, {
         data: processedResults,
         timestamp: Date.now()
       })
 
-      console.log(`Found ${processedResults.length} places`)
-      return processedResults
+      // Filter results to user's radius
+      const userPlaces = this.filterPlacesWithinRadius(lat, lng, userRadius, types)
+
+      console.log(`Large radius search found ${processedResults.length} places, ${userPlaces.length} within user radius ${userRadius}m`)
+      return userPlaces
 
     } catch (error) {
       console.error('Error searching nearby places:', error)
@@ -571,12 +717,55 @@ export const placesService = new PlacesService()
  * Available place types for selection
  */
 export const AVAILABLE_PLACE_TYPES = [
-  { value: 'restaurant', label: 'Restaurant', icon: '🍽️' },
-  { value: 'cafe', label: 'Cafe', icon: '☕' },
-  { value: 'shopping_mall', label: 'Shopping Mall', icon: '🛍️' },
-  { value: 'supermarket', label: 'Supermarket', icon: '🏪' },
-  { value: 'convenience_store', label: 'Convenience Store', icon: '🏬' },
-  { value: 'bakery', label: 'Bakery', icon: '🥖' }
+  // Basic amenities
+  { value: 'toilet', label: 'Toilet', icon: '🚻' },
+  { value: 'shopping', label: 'Shopping', icon: '🛍️' },
+  { value: 'food', label: 'Food', icon: '👨‍🍳' },
+  { value: 'coffee', label: 'Coffee', icon: '☕' },
+  { value: 'dessert', label: 'Dessert', icon: '🍰' },
+  { value: 'markets', label: 'Markets', icon: '🛒' },
+  { value: 'bookstores', label: 'Bookstores', icon: '📚' },
+  
+  // Services
+  { value: 'free_wifi', label: 'Free Wi-Fi', icon: '📶' },
+  { value: 'charging_spots', label: 'Charging Spots', icon: '🔌' },
+  { value: 'parking', label: 'Parking', icon: '🅿️' },
+  { value: 'accessible', label: 'Accessible', icon: '♿' },
+  
+  // Price levels
+  { value: 'budget_friendly', label: 'Budget-friendly', icon: '💰' },
+  { value: 'luxury', label: 'Luxury', icon: '💎' },
+  
+  // Activities
+  { value: 'photo_spots', label: 'Photo Spots', icon: '📸' },
+  { value: 'music', label: 'Music', icon: '🎵' },
+  { value: 'film', label: 'Film', icon: '🎬' },
+  { value: 'anime', label: 'Anime', icon: '🌀' },
+  { value: 'gaming', label: 'Gaming', icon: '🎮' },
+  { value: 'comedy', label: 'Comedy', icon: '😂' },
+  { value: 'arts', label: 'Arts', icon: '🎨' },
+  { value: 'fashion', label: 'Fashion', icon: '👗' },
+  { value: 'health', label: 'Health', icon: '❤️' },
+  { value: 'sports_fitness', label: 'Sports & Fitness', icon: '🏃' },
+  { value: 'hiking', label: 'Hiking', icon: '🥾' },
+  { value: 'parks', label: 'Parks', icon: '🌳' },
+  { value: 'museums', label: 'Museums', icon: '🏛️' },
+  { value: 'live_music', label: 'Live Music', icon: '🎸' },
+  { value: 'nightlife', label: 'Nightlife', icon: '🌃' },
+  
+  // Demographics
+  { value: 'family_friendly', label: 'Family-friendly', icon: '👨‍👩‍👧‍👦' },
+  { value: 'pet_friendly', label: 'Pet-friendly', icon: '🐾' },
+  
+  // Categories
+  { value: 'travel_outdoor', label: 'Travel & Outdoor', icon: '🏖️' },
+  { value: 'community', label: 'Community', icon: '🤝' },
+  { value: 'charities_causes', label: 'Charities & Causes', icon: '🎗️' },
+  { value: 'government', label: 'Government', icon: '🏛️' },
+  { value: 'home_lifestyle', label: 'Home & Lifestyle', icon: '🏠' },
+  { value: 'seasonal', label: 'Seasonal', icon: '💜' },
+  { value: 'science_tech', label: 'Science & Tech', icon: '🧪' },
+  { value: 'film_media', label: 'Film & Media', icon: '🎭' }
 ]
 
 /**

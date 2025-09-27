@@ -12,34 +12,66 @@
       </div>
     </header>
 
-    <!-- Place Type Selection -->
-    <section class="place-type-selection card" v-if="!isTracking">
-      <h3>What are you looking for?</h3>
-      <div class="type-grid">
-        <button
-          v-for="type in AVAILABLE_PLACE_TYPES"
-          :key="type.value"
-          @click="togglePlaceType(type.value)"
-          class="type-btn"
-          :class="{ active: selectedPlaceTypes.includes(type.value) }"
-        >
-          <span class="type-icon">{{ type.icon }}</span>
-          <span class="type-label">{{ type.label }}</span>
-        </button>
-      </div>
-      <div class="radius-control">
-        <label for="radius-slider">Search Radius: {{ searchRadius }}m</label>
-        <input
-          id="radius-slider"
-          type="range"
-          min="100"
-          max="300"
-          step="25"
-          v-model="searchRadius"
-          class="radius-slider"
-        />
-      </div>
-    </section>
+    <!-- Interest Selection Interface -->
+    <div class="interest-selection-container" v-if="!isTracking">
+      <!-- Main Content -->
+      <main class="selection-main">
+        <div class="selection-form">
+          <h2>Tell us what you love</h2>
+          <p class="selection-description">
+            Choose between {{ minSelections }} and {{ maxSelections }} interests, and we'll curate the best places and events for your feed.
+          </p>
+          
+          <!-- Interest Grid -->
+          <div class="interest-grid">
+            <button
+              v-for="type in AVAILABLE_PLACE_TYPES"
+              :key="type.value"
+              @click="togglePlaceType(type.value)"
+              class="interest-btn"
+              :class="{ 
+                selected: selectedPlaceTypes.includes(type.value),
+                disabled: !selectedPlaceTypes.includes(type.value) && selectedPlaceTypes.length >= maxSelections
+              }"
+            >
+              <span class="interest-icon">{{ type.icon }}</span>
+              <span class="interest-label">{{ type.label }}</span>
+            </button>
+          </div>
+
+          <!-- Distance Control -->
+          <div class="distance-control">
+            <label for="radius-slider">Search Radius: {{ searchRadius }}m</label>
+            <input
+              id="radius-slider"
+              type="range"
+              min="50"
+              max="500"
+              step="25"
+              v-model="searchRadius"
+              class="radius-slider"
+            />
+          </div>
+
+          <!-- Selection Status -->
+          <div class="selection-footer">
+            <div class="selection-status">
+              {{ selectedPlaceTypes.length }} selected
+              <span v-if="selectedPlaceTypes.length < minSelections">
+                · pick {{ minSelections - selectedPlaceTypes.length }} more
+              </span>
+            </div>
+            <button 
+              class="start-trip-btn"
+              :disabled="selectedPlaceTypes.length < minSelections"
+              @click="startTrip"
+            >
+              Start Trip
+            </button>
+          </div>
+        </div>
+      </main>
+    </div>
 
     <!-- Current Location Info -->
     <section class="location-info card" v-if="currentLocation">
@@ -75,17 +107,8 @@
       </div>
     </section>
 
-    <section class="controls card">
+    <section class="controls card" v-if="isTracking">
       <button 
-        v-if="!isTracking" 
-        @click="startTrip" 
-        class="btn btn-primary"
-        :disabled="selectedPlaceTypes.length === 0"
-      >
-        Start Trip
-      </button>
-      <button 
-        v-else 
         @click="endTrip" 
         class="btn btn-danger"
       >
@@ -101,7 +124,7 @@
       </button>
       
       <button 
-        v-if="!isTracking && !geolocationSupported" 
+        v-if="!geolocationSupported" 
         @click="startTestMode" 
         class="btn btn-test"
       >
@@ -188,6 +211,7 @@ import {
   formatDuration, 
   formatDistance, 
   getPlaceType,
+  mapInterestTypesToGoogleTypes,
   isGeolocationSupported,
   watchPosition,
   placesService,
@@ -218,8 +242,10 @@ const networkErrorCount = ref(0)
 const maxNetworkRetries = ref(3)
 
 // Place discovery state
-const selectedPlaceTypes = ref(['restaurant', 'cafe'])
+const selectedPlaceTypes = ref([])
 const searchRadius = ref(150)
+const minSelections = 3
+const maxSelections = 25
 const nearbyPlaces = ref([])
 const allDiscoveredPlaces = ref([])
 const discoveredPlaceIds = ref(new Set())
@@ -294,7 +320,16 @@ const togglePlaceType = (type) => {
   if (index > -1) {
     selectedPlaceTypes.value.splice(index, 1)
   } else {
-    selectedPlaceTypes.value.push(type)
+    // Check if we can add more selections
+    if (selectedPlaceTypes.value.length < maxSelections) {
+      selectedPlaceTypes.value.push(type)
+    } else {
+      // Show toast notification when limit is reached
+      toastTitle.value = 'Selection Limit Reached'
+      toastDescription.value = `You can select up to ${maxSelections} interests.`
+      toastType.value = 'warning'
+      showToast.value = true
+    }
   }
 }
 
@@ -331,7 +366,12 @@ const initializeMap = async () => {
 }
 
 const updateUserLocation = (lat, lng) => {
-  if (!map.value) return
+  if (!map.value) {
+    console.warn('Map not initialized yet')
+    return
+  }
+
+  console.log('Updating user location to:', lat, lng)
 
   // Update map center
   map.value.setCenter({ lat, lng })
@@ -339,36 +379,49 @@ const updateUserLocation = (lat, lng) => {
   // Update or create user marker
   if (userMarker.value) {
     userMarker.value.setPosition({ lat, lng })
+    console.log('Updated existing user marker')
   } else {
-    userMarker.value = new google.maps.Marker({
-      position: { lat, lng },
-      map: map.value,
-      title: 'Your Location',
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 10,
-        fillColor: '#3b82f6',
-        fillOpacity: 1,
-        strokeColor: 'white',
-        strokeWeight: 3
-      }
-    })
+    try {
+      userMarker.value = new google.maps.Marker({
+        position: { lat, lng },
+        map: map.value,
+        title: 'Your Location',
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 12,
+          fillColor: '#3b82f6',
+          fillOpacity: 1,
+          strokeColor: 'white',
+          strokeWeight: 3
+        },
+        zIndex: 1000
+      })
+      console.log('Created new user marker')
+    } catch (error) {
+      console.error('Error creating user marker:', error)
+    }
   }
 
   // Update radius circle
   if (radiusCircle.value) {
     radiusCircle.value.setCenter({ lat, lng })
+    radiusCircle.value.setRadius(searchRadius.value)
   } else {
-    radiusCircle.value = new google.maps.Circle({
-      strokeColor: '#3b82f6',
-      strokeOpacity: 0.8,
-      strokeWeight: 2,
-      fillColor: '#3b82f6',
-      fillOpacity: 0.1,
-      map: map.value,
-      center: { lat, lng },
-      radius: searchRadius.value
-    })
+    try {
+      radiusCircle.value = new google.maps.Circle({
+        strokeColor: '#3b82f6',
+        strokeOpacity: 0.8,
+        strokeWeight: 2,
+        fillColor: '#3b82f6',
+        fillOpacity: 0.1,
+        map: map.value,
+        center: { lat, lng },
+        radius: searchRadius.value
+      })
+      console.log('Created new radius circle')
+    } catch (error) {
+      console.error('Error creating radius circle:', error)
+    }
   }
 }
 
@@ -484,8 +537,8 @@ const handleGeolocationError = (error) => {
 }
 
 const startTestMode = async () => {
-  if (selectedPlaceTypes.value.length === 0) {
-    showGeolocationError('Please select at least one place type to discover')
+  if (selectedPlaceTypes.value.length < minSelections) {
+    showGeolocationError(`Please select at least ${minSelections} interests to discover`)
     return
   }
 
@@ -580,8 +633,8 @@ const startTrip = async () => {
     return
   }
 
-  if (selectedPlaceTypes.value.length === 0) {
-    showGeolocationError('Please select at least one place type to discover')
+  if (selectedPlaceTypes.value.length < minSelections) {
+    showGeolocationError(`Please select at least ${minSelections} interests to discover`)
     return
   }
 
@@ -706,12 +759,19 @@ const clearData = () => {
 
 const checkForNearbyPlaces = async (lat, lng, timestamp) => {
   try {
-    // Search for nearby places using Google Places API
+    // Map our interest types to Google Places API types
+    const googleTypes = mapInterestTypesToGoogleTypes(selectedPlaceTypes.value)
+    
+    console.log('Selected interests:', selectedPlaceTypes.value)
+    console.log('Mapped to Google types:', googleTypes)
+    console.log('User search radius:', searchRadius.value, 'm')
+    
+    // Search for nearby places using optimized strategy
     const places = await placesService.searchNearbyPlaces(
       lat, 
       lng, 
       searchRadius.value, 
-      selectedPlaceTypes.value
+      googleTypes
     )
 
     // Reset network error count on successful API call
@@ -791,7 +851,7 @@ const loadFromLocalStorage = () => {
       sessionDiscovered.value = parsed.sessionDiscovered || []
       allDiscoveredPlaces.value = parsed.allDiscoveredPlaces || []
       discoveredPlaceIds.value = new Set(parsed.discoveredPlaceIds || [])
-      selectedPlaceTypes.value = parsed.selectedPlaceTypes || ['restaurant', 'cafe']
+      selectedPlaceTypes.value = parsed.selectedPlaceTypes || []
       searchRadius.value = parsed.searchRadius || 150
       tripStartTime.value = parsed.tripStartTime || 0
       tripEndTime.value = parsed.tripEndTime || 0
@@ -1530,6 +1590,267 @@ onUnmounted(() => {
     padding-right: max(env(safe-area-inset-right), clamp(12px, 4vw, 28px));
     padding-top: max(env(safe-area-inset-top), clamp(12px, 4vw, 28px));
     padding-bottom: max(env(safe-area-inset-bottom), clamp(18px, 5vw, 28px));
+  }
+}
+
+/* Interest Selection Interface Styles */
+.interest-selection-container {
+  min-height: 100vh;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+}
+
+
+.selection-main {
+  flex: 1;
+  padding: 40px;
+  display: flex;
+  justify-content: center;
+}
+
+.selection-form {
+  max-width: 800px;
+  width: 100%;
+}
+
+.selection-form h2 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 16px 0;
+}
+
+.selection-description {
+  font-size: 16px;
+  color: #6b7280;
+  margin: 0 0 40px 0;
+  line-height: 1.5;
+}
+
+.distance-control {
+  margin-bottom: 32px;
+  padding: 20px 0;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.distance-control label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 12px;
+}
+
+.radius-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #e5e7eb;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.radius-slider::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.2s;
+}
+
+.radius-slider::-webkit-slider-thumb:hover {
+  background: #2563eb;
+}
+
+.radius-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.radius-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: #e5e7eb;
+}
+
+.interest-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.interest-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.interest-btn:hover:not(.disabled) {
+  border-color: #3b82f6;
+  background: #f8fafc;
+}
+
+.interest-btn.selected {
+  border-color: #10b981;
+  background: #f0fdf4;
+  color: #047857;
+  position: relative;
+}
+
+.interest-btn.selected::after {
+  content: '✓';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  background: #10b981;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.interest-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.interest-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.interest-label {
+  flex: 1;
+}
+
+.selection-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0;
+  border-top: 1px solid #e5e7eb;
+}
+
+.selection-status {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.start-trip-btn {
+  padding: 12px 24px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.start-trip-btn:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.start-trip-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Mobile Responsiveness for Interest Selection */
+@media (max-width: 768px) {
+  .selection-main {
+    padding: 20px;
+  }
+  
+  .selection-form h2 {
+    font-size: 24px;
+  }
+  
+  .selection-description {
+    font-size: 14px;
+  }
+  
+  .distance-control {
+    margin-bottom: 24px;
+    padding: 16px 0;
+  }
+  
+  .distance-control label {
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+  
+  .interest-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+  }
+  
+  .interest-btn {
+    padding: 12px 16px;
+    font-size: 13px;
+  }
+  
+  .interest-icon {
+    font-size: 18px;
+  }
+  
+  .selection-footer {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .start-trip-btn {
+    width: 100%;
+    padding: 16px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .selection-main {
+    padding: 16px;
+  }
+  
+  .interest-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .interest-btn {
+    padding: 16px;
+    font-size: 14px;
   }
 }
 
