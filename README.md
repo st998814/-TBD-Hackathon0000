@@ -1,8 +1,8 @@
-# CityWalk - Location-Based Discovery App
+# CityMouse - Location-Based Discovery App
 
 A Vue 3 + Vite web application that allows users to discover nearby places while walking, similar to Pokémon GO's discovery experience. Built with Google Maps and Places API integration.
 
-## 🚀 Features
+##  Features
 
 ### Core Functionality
 - **Real-time Location Tracking**: Uses browser geolocation API with `watchPosition` for continuous tracking
@@ -85,7 +85,7 @@ Utility library containing:
 5. **Notification**: Show toast for new discoveries
 6. **Map Update**: Add markers and update UI
 
-## 🎯 Usage
+## Usage
 
 ### Starting a Trip
 1. Select place types you want to discover
@@ -138,7 +138,7 @@ The app is fully responsive and works on mobile devices:
 - Responsive grid layouts
 - PWA-ready with manifest
 
-## 🚀 Development
+## Development
 
 ### Prerequisites
 - Node.js 16+
@@ -158,14 +158,14 @@ npm run build
 npm run preview
 ```
 
-## 🔒 Privacy & Security
+## Privacy & Security
 
 - **Location Data**: Only stored locally, never transmitted to external servers
 - **API Keys**: Should be restricted to specific domains in production
 - **Permissions**: Requires user consent for location access
 - **Data Storage**: All data stored in browser localStorage
 
-## 🎨 Design Features
+## Design Features
 
 - **Modern UI**: Clean, card-based design with subtle shadows
 - **Color System**: Consistent blue/green color scheme
@@ -173,7 +173,7 @@ npm run preview
 - **Animations**: Smooth transitions and hover effects
 - **Accessibility**: Proper contrast ratios and semantic HTML
 
-## 🔮 Future Enhancements
+## Future Enhancements
 
 - **Offline Support**: Cache map tiles and place data
 - **Social Features**: Share discoveries with friends
